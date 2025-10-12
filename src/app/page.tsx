@@ -1,103 +1,115 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import React, { useState, useEffect } from 'react';
+import { TreinadorFicha, FICHA_TREINADOR_INICIAL } from './types';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, Auth, onAuthStateChanged, User } from 'firebase/auth';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
-}
+// COMPONENTES
+import Login from '@/components/Auth/Login';
+import FichaTreinador from '@/components/FichaTreinador/FichaTreinador';
+
+const TreinadorHub: React.FC = () => {
+    // 1. Estados do Aplicativo
+    const [db, setDb] = useState<Firestore | null>(null);
+    const [auth, setAuth] = useState<Auth | null>(null);
+    const [user, setUser] = useState<User | null>(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
+    const [ficha, setFicha] = useState<TreinadorFicha>(FICHA_TREINADOR_INICIAL);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // 2. Inicialização do Firebase e Autenticação
+    useEffect(() => {
+        // NOVO: A verificação impede que o Firebase seja inicializado mais de uma vez
+        if (!getApps().length) {
+            try {
+                const firebaseConfig = {
+                    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+                    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+                    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+                    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+                    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+                    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+                    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+                };
+
+                const app = initializeApp(firebaseConfig);
+                const authInstance = getAuth(app);
+                const dbInstance = getFirestore(app);
+
+                setAuth(authInstance);
+                setDb(dbInstance);
+
+                // --- A PARTE MAIS IMPORTANTE ---
+                // NOVO: Criamos o "vigia" que ouve as mudanças de login
+                const unsubscribe = onAuthStateChanged(authInstance, (currentUser) => {
+                    setUser(currentUser); // Guarda o usuário logado (ou null)
+                    
+                    // NOVO: Este é o "sinal verde"!
+                    // Avisamos a aplicação que a verificação inicial terminou.
+                    setIsAuthReady(true);
+                    setLoading(false); // Também paramos o estado de loading geral
+                });
+
+                // NOVO: Função de limpeza que remove o "vigia" quando o componente sai da tela
+                return () => unsubscribe();
+                // --- FIM DA PARTE IMPORTANTE ---
+
+            } catch (err) {
+                console.error("Falha ao inicializar o Firebase:", err);
+                setError("Não foi possível conectar ao servidor.");
+                setLoading(false);
+                setIsAuthReady(true); // NOVO: Se der erro, também paramos de carregar
+            }
+        }
+    }, []);
+
+    // 3. Carregamento de Dados do Treinador (RASCUNHO - será ativado depois)
+    // useEffect(() => {
+    //     if (db && user) {
+    //         // Aqui virá a lógica para carregar a ficha do treinador do Firestore
+    //     }
+    // }, [db, user]);
+
+    // Função para passar para os componentes filhos atualizarem a ficha
+    const handleUpdateFicha = (novaFicha: TreinadorFicha) => {
+        setFicha(novaFicha);
+        // Aqui virá a lógica para salvar a ficha no Firestore
+    };
+
+    // 4. Renderização Condicional
+    if (!isAuthReady || loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                <div className="text-center">
+                    {/* Você pode adicionar um ícone de spinner animado aqui */}
+                    <h1 className="text-2xl font-semibold text-gray-700">Carregando hub de treinadores...</h1>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return <div className="text-center text-red-500 mt-10">{error}</div>;
+    }
+
+    // MUDANÇA: Agora a decisão é baseada no objeto 'user'
+    return (
+        <main className="min-h-screen bg-gray-100">
+            {user && db ? (
+                // Se o usuário está logado E o db está pronto, mostramos a ficha
+                <FichaTreinador
+                    initialFicha={ficha} // <-- DEVE ser 'ficha'
+                    onSave={handleUpdateFicha} // <-- DEVE ser 'onUpdateFicha'
+                />
+            ) : (
+                // Se não há usuário, mostramos a tela de Login
+                <Login auth={auth} />
+            )}
+        </main>
+    );
+};
+
+export default TreinadorHub;
