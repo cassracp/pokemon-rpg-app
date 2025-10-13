@@ -51,6 +51,8 @@ const TreinadorHub: React.FC = () => {
                 const authInstance = getAuth(app);
                 const dbInstance = getFirestore(app);
 
+                authInstance.languageCode = 'pt-br';
+
                 setAuth(authInstance);
                 setDb(dbInstance);
 

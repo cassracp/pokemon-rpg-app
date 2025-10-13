@@ -1,6 +1,6 @@
 import React, { useState, FormEvent } from 'react';
 import { FirebaseError } from 'firebase/app';
-import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signOut, User } from 'firebase/auth';
 
 interface LoginProps {
   auth: Auth | null;
@@ -13,51 +13,89 @@ const Login: React.FC<LoginProps> = ({ auth }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+ const handleResendVerification = async () => {
+    if (!auth || !auth.currentUser) {
+      setError("Nenhum usuário logado para reenviar o e-mail.");
+      return;
+    }
+    try {
+      await sendEmailVerification(auth.currentUser);
+      setSuccessMessage("Um novo e-mail de verificação foi enviado.");
+      setError(null);
+    } catch (err) {
+      setError("Falha ao reenviar o e-mail. Tente novamente mais tarde.");
+    }
+  };
 
   // Função para lidar com o envio do formulário
-    const handleSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setLoading(true);
+  const handleSubmit = async (e: FormEvent) => {
+      e.preventDefault();
+      setError(null);
+      setSuccessMessage(null);
+      setLoading(true);
 
-        if (!auth) {
-        setError("Serviço de autenticação não está pronto.");
-        setLoading(false);
-        return;
+      if (!auth) {
+      setError("Serviço de autenticação não está pronto.");
+      setLoading(false);
+      return;
+      }
+
+    try {
+      if (isLogin) {
+        // MODO LOGIN
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // A VERIFICAÇÃO CRÍTICA
+        if (!user.emailVerified) {
+          await signOut(auth); // Desloga o usuário
+          setError("Seu e-mail ainda não foi verificado. Por favor, verifique sua caixa de entrada.");
+          setLoading(false);
+          return; // Para a execução aqui
         }
+        // Se o e-mail foi verificado, o onAuthStateChanged no page.tsx vai assumir.
 
-        try {
-            if (isLogin) {
-                await signInWithEmailAndPassword(auth, email, password);
-            } else {
-                await createUserWithEmailAndPassword(auth, email, password);
-            }
-        } catch (error) { // MUDANÇA: Capturamos o erro genérico primeiro
-        // MUDANÇA: Afirmamos que este erro é do tipo FirebaseError
-            const firebaseError = error as FirebaseError;
+      } else {
+        // MODO CADASTRO
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-            // Agora usamos a nossa variável tipada
-            switch (firebaseError.code) {
-                case 'auth/user-not-found':
-                setError('Nenhum treinador encontrado com este e-mail.');
-                break;
-                case 'auth/wrong-password':
-                setError('Senha incorreta. Tente novamente.');
-                break;
-                case 'auth/email-already-in-use':
-                setError('Este e-mail já está registrado por outro treinador.');
-                break;
-                case 'auth/weak-password':
-                setError('A senha precisa ter pelo menos 6 caracteres.');
-                break;
-                default:
-                setError('Ocorreu um erro. Tente novamente mais tarde.');
-                break;
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
+        await sendEmailVerification(user);
+        await signOut(auth);
+
+        setSuccessMessage("Cadastro realizado! Verifique sua caixa de entrada para confirmar seu e-mail antes de fazer o login.");
+        setIsLogin(true);
+        setEmail('');
+        setPassword('');
+      }
+    } catch (error) {
+      const firebaseError = error as FirebaseError;
+      switch (firebaseError.code) {
+              case 'auth/user-not-found':
+              setError('Nenhum treinador encontrado com este e-mail.');
+              break;
+              case 'auth/wrong-password':
+              setError('Senha incorreta. Tente novamente.');
+              break;
+              case 'auth/email-already-in-use':
+              setError('Este e-mail já está registrado por outro treinador.');
+              break;
+              case 'auth/weak-password':
+              setError('A senha precisa ter pelo menos 6 caracteres.');
+              break;
+              case 'auth/invalid-credential':
+              setError('Credenciais inválidas. Se você acabou de se cadastrar, verifique seu e-mail.');
+              break;
+              default:
+              setError('Ocorreu um erro. Tente novamente mais tarde.');
+              break;
+          }
+      } finally {
+          setLoading(false);
+      }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-200">
@@ -65,6 +103,19 @@ const Login: React.FC<LoginProps> = ({ auth }) => {
         <h2 className="text-2xl font-bold text-center text-gray-800">
           {isLogin ? 'Login de Treinador' : 'Registro de Novo Treinador'}
         </h2>
+
+        {error && (
+          <div className="text-sm text-center text-red-500">
+            <p>{error}</p>
+            {/* Link para reenviar o e-mail */}
+            {error.includes("não foi verificado") && (
+              <button onClick={handleResendVerification} className="font-bold underline hover:text-red-700">
+                Reenviar e-mail de verificação
+              </button>
+            )}
+          </div>
+        )}
+        {successMessage && <p className="text-sm text-center text-green-600">{successMessage}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
