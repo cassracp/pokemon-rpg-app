@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { TreinadorFicha, FICHA_TREINADOR_INICIAL, AtributoKey, PericiaPersonalizada } from '@/app/types/index';
+import { TreinadorFicha, AtributoKey, PericiaPersonalizada } from '@/app/types/index';
 import { calcularStatusTreinador, calculateTotalPoints } from '@/utils/calculos';
 import PainelEquipePokemon from '@/components/PainelEquipePokemon/PainelEquipePokemon';
 import debounce from 'lodash-es/debounce'; // Assumindo que lodash está instalado ou será instalado
@@ -10,13 +10,14 @@ import debounce from 'lodash-es/debounce'; // Assumindo que lodash está instala
 interface FichaTreinadorProps {
     initialFicha: TreinadorFicha;
     onSave: (ficha: TreinadorFicha) => void;
+    onLogout: () => void;
 }
 
 // ----------------------------------------------------------------------
 // Treinador Componente
 // ----------------------------------------------------------------------
 
-const FichaTreinador: React.FC<FichaTreinadorProps> = ({ initialFicha, onSave }) => {
+const FichaTreinador: React.FC<FichaTreinadorProps> = ({ initialFicha, onSave, onLogout }) => {
     const [ficha, setFicha] = useState<TreinadorFicha>(initialFicha);
     const [saved, setSaved] = useState(true);
     const [activeTab, setActiveTab] = useState<'treinador' | 'equipe'>('treinador');
@@ -179,6 +180,12 @@ const FichaTreinador: React.FC<FichaTreinadorProps> = ({ initialFicha, onSave })
                 <h1 className="text-3xl font-extrabold text-gray-800 mb-2">
                     Ficha de Treinador: {ficha.nome || 'Novo Personagem'}
                 </h1>
+                <button
+                    onClick={onLogout}
+                    className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-md transition-colors"
+                >
+                    Sair
+                </button>
                 <div className="flex justify-between items-end">
                     <nav className="flex space-x-2">
                         <TabButton name="treinador" activeTab={activeTab} onClick={setActiveTab}>

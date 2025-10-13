@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { TreinadorFicha, FICHA_TREINADOR_INICIAL } from './types';
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, Auth, onAuthStateChanged, User } from 'firebase/auth';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { getAuth, Auth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 // COMPONENTES
@@ -36,6 +37,17 @@ const TreinadorHub: React.FC = () => {
                 };
 
                 const app = initializeApp(firebaseConfig);
+                if (process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
+                    initializeAppCheck(app, {
+                        provider: new ReCaptchaV3Provider(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY),
+
+                        // Opcional: define se o token é atualizado automaticamente.
+                        isTokenAutoRefreshEnabled: true
+                    });
+                } else {
+                    console.error("Chave do site do reCAPTCHA não encontrada. Verifique o arquivo .env.local");
+                }
+
                 const authInstance = getAuth(app);
                 const dbInstance = getFirestore(app);
 
@@ -79,6 +91,22 @@ const TreinadorHub: React.FC = () => {
         // Aqui virá a lógica para salvar a ficha no Firestore
     };
 
+    // Função de Logout
+    const handleLogout = async () => {
+        if (!auth) {
+            console.error("Serviço de autenticação não está pronto para logout.");
+            return;
+        }
+        try {
+            await signOut(auth);
+            // O onAuthStateChanged vai detectar a mudança e atualizar o estado 'user' para null,
+            // o que fará a tela de Login ser renderizada automaticamente.
+        } catch (error) {
+            console.error("Erro ao fazer logout:", error);
+            setError("Não foi possível deslogar. Tente novamente.");
+        }
+    };
+
     // 4. Renderização Condicional
     if (!isAuthReady || loading) {
         return (
@@ -95,7 +123,6 @@ const TreinadorHub: React.FC = () => {
         return <div className="text-center text-red-500 mt-10">{error}</div>;
     }
 
-    // MUDANÇA: Agora a decisão é baseada no objeto 'user'
     return (
         <main className="min-h-screen bg-gray-100">
             {user && db ? (
@@ -103,6 +130,7 @@ const TreinadorHub: React.FC = () => {
                 <FichaTreinador
                     initialFicha={ficha} // <-- DEVE ser 'ficha'
                     onSave={handleUpdateFicha} // <-- DEVE ser 'onUpdateFicha'
+                    onLogout={handleLogout}
                 />
             ) : (
                 // Se não há usuário, mostramos a tela de Login
