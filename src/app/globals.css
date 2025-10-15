@@ -1,26 +1,120 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
+  /* Tema Claro (padrão) */
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 216 10% 90%;      /* #E5E7EB - Cinza claro */
+    --foreground: 222 47% 11%;      /* #111827 - Cinza bem escuro */
+    --card: 0 0% 100%;              /* #FFFFFF - Branco */
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222 47% 11%;
+    --radius: 0.5rem;
+  }
+ 
+  /* Tema Escuro (ativado pela classe .dark) */
+  .dark {
+    --background: 222 47% 11%;      /* #111827 - Cinza bem escuro */
+    --foreground: 210 40% 98%;      /* #FAFAFA - Quase branco */
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 210 40% 98%;
+  }
+
+  /* Estilos Globais */
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .hide-number-spinners {
+    /* Remove a aparência padrão do navegador */
+    -webkit-appearance: none;
+    -moz-appearance: textfield; /* Mantemos para Firefox mais antigo */
+    appearance: none;
+    margin: 0;
+  }
+  .hide-number-spinners::-webkit-inner-spin-button,
+  .hide-number-spinners::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+
+  .pixelated {
+    image-rendering: -moz-crisp-edges;          /* Para Firefox */
+    image-rendering: -webkit-optimize-contrast; /* Para Webkit (Chrome, Safari, Edge) */
+    image-rendering: crisp-edges;               /* Fallback para outros */
+    image-rendering: pixelated;                 /* O padrão oficial */
+  }
+}
+
+/* Animações e Classes Customizadas */
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-0.5deg); }
+  75% { transform: rotate(0.5deg); }
+}
+
+.reorder-shake {
+  animation: shake 0.4s infinite ease-in-out;
+}
+
+.pokemon-header-container {
+  display: flex; /* Ativa o layout de colunas */
+  gap: 1rem; /* Espaçamento entre a imagem e as informações */
+  align-items: flex-start; /* Alinha as colunas pelo topo */
+}
+
+.pokemon-image-column {
+  flex-shrink: 0; /* Impede que a coluna da imagem encolha */
+}
+
+.pokemon-info-column {
+  width: 100%; /* Faz a coluna de informações ocupar todo o espaço restante */
+  display: flex;
+  flex-direction: column; /* Organiza os itens de informação verticalmente */
+  gap: 0.25rem; 
+}
+
+.apelido-container {
+  display: flex;
+  align-items: center; /* Centraliza verticalmente o apelido e a pokebola */
+  gap: 0.5rem; /* Espaço entre o apelido e a pokebola */
+}
+
+.hp-bar-container {
+    display: flex;
+    align-items: center;
 }
